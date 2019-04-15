@@ -1,0 +1,135 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MobLab :)</title>
+</head>
+<body>
+    <script src="./code/highcharts.js"></script>
+    <script src="./code/modules/exporting.js"></script>
+    <script src="./code/modules/export-data.js"></script>
+    <script src="./dojo/dojo.js"
+    data-dojo-config="async: true"></script>
+
+    <h1>Dojo + HighCharts Demonstrations - Patrick Toral</h1>
+    <p style="float:left">Select Interval:</p>
+    <select style="margin-top:18px; margin-left:10px" id="interval-select">
+            <!-- <option class="interval" value="All">View All Intervals</option> -->
+            <option class="interval" value="Yearly">Yearly Change</option>
+            <option class="interval" value="Monthly">Monthly Change</option>
+            <option class="interval" value="Weekly">Weekly Change</option>
+            <option class="interval" value="Daily">Daily Change</option>
+            <option class="interval" value="Random">Random Interval</option>
+    </select>
+    <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+
+    <script type="text/javascript">
+        //Referernce to highcharts obj
+        const chart = Highcharts.chart('container', {
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: 'Commodity Price Differential'
+            },
+            subtitle: {
+                text: 'Source: tradingeconomics.com'
+            },
+            xAxis: {
+                crosshair: true
+            },
+            yAxis: {
+                title: {
+                    text: 'Change in $'
+                }
+            },
+            tooltip: {
+                headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+                pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+                    '<td style="padding:0"><b>{point.y:.1f} $</b></td></tr>',
+                footerFormat: '</table>',
+                shared: true,
+                useHTML: true
+            },
+            plotOptions: {
+                column: {
+                    pointPadding: 0.2,
+                    borderWidth: 0
+                }
+            },
+            series: [{name:"Select Interval"}],
+        });
+    
+        const dependencies = ["dojo/on", "dojo/store/Memory","dojo/request", "dojo/query", "dojo/dom-style", "dojo/domReady!"];
+        require(dependencies, 
+            function(on, Memory,request, query, domStyle) {
+                
+                //gather and parse data once on DOM load
+                //select analyzed data based on user input
+                request("https://api.tradingeconomics.com/markets/commodities?c=guest:guest&format=json").then(function(Json){
+            
+                    let names = [];
+                    let dailyChange = [];
+                    let weeklyChange = [];
+                    let monthlyChange = [];
+                    let yearlyChange = [];
+                    
+                    //organize data
+                    JSON.parse(Json).forEach(commodity => {
+                        names.push(commodity['Name']);
+                        dailyChange.push([commodity['DailyChange']]);
+                        weeklyChange.push([commodity['WeeklyChange']]);
+                        monthlyChange.push([commodity['MonthlyChange']]);
+                        yearlyChange.push([commodity['YearlyChange']]);
+                    });
+
+                    let commodities = {
+                        Names: names,
+                        Daily: dailyChange,
+                        Weekly: weeklyChange,
+                        Monthly: monthlyChange,
+                        Yearly: yearlyChange,
+                    };
+        
+                    //init onclick listener on select HTML
+                    let selection = query("#interval-select");
+                    on(selection, "change", function(e){
+                            updateGraph(commodities, e.target.value);
+                    });
+                });
+            }
+        );
+    
+        let updateGraph = function(commodities,interval){
+    
+            checkedInterval = (interval == "Random") ? getRandomInterval(): interval;
+            chart.xAxis[0].setCategories([checkedInterval + " Change"]);
+            let chosenData = commodities[checkedInterval];
+            let series = [];
+            if(chart.series.length >= 1){
+                let length = chart.series.length;
+                for(var i = length -1; i > -1; i--) {
+                    chart.series[i].remove();
+                }
+            }
+            for(let i = 0; i < chosenData.length; i++){
+                let curSeries = {};
+                curSeries["name"] = commodities["Names"][i];
+                curSeries["data"] = chosenData[i];
+                chart.addSeries(curSeries,false)
+            }            
+            chart.redraw()
+        }
+
+        let getRandomInterval = function(rand = Math.random()){
+            //Just for fun
+            if(rand < 0.25){ return "Daily";}
+            if(rand > 0.50){ return "Weekly";}
+            if(rand <= 0.50){ return "Monthly";}
+            if(rand > 0.75){ return "Yearly";}
+            return "Weekly";
+        }
+    </script>
+</body>
+</html>
