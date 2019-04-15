@@ -15,7 +15,6 @@
     <h1>Dojo + HighCharts Demonstrations - Patrick Toral</h1>
     <p style="float:left">Select Interval:</p>
     <select style="margin-top:18px; margin-left:10px" id="interval-select">
-            <!-- <option class="interval" value="All">View All Intervals</option> -->
             <option class="interval" value="Yearly">Yearly Change</option>
             <option class="interval" value="Monthly">Monthly Change</option>
             <option class="interval" value="Weekly">Weekly Change</option>
@@ -58,15 +57,14 @@
                     borderWidth: 0
                 }
             },
-            series: [{name:"Select Interval"}],
+            series: [{name:"Select Interval",data:[0]}],
         });
     
         const dependencies = ["dojo/on", "dojo/store/Memory","dojo/request", "dojo/query", "dojo/dom-style", "dojo/domReady!"];
         require(dependencies, 
             function(on, Memory,request, query, domStyle) {
                 
-                //gather and parse data once on DOM load
-                //select analyzed data based on user input
+                //gather and parse data just ONCE on DOM load
                 request("https://api.tradingeconomics.com/markets/commodities?c=guest:guest&format=json").then(function(Json){
             
                     let names = [];
@@ -75,7 +73,7 @@
                     let monthlyChange = [];
                     let yearlyChange = [];
                     
-                    //organize data
+                    //get what I need out of that data
                     JSON.parse(Json).forEach(commodity => {
                         names.push(commodity['Name']);
                         dailyChange.push([commodity['DailyChange']]);
@@ -102,23 +100,27 @@
         );
     
         let updateGraph = function(commodities,interval){
-    
             checkedInterval = (interval == "Random") ? getRandomInterval(): interval;
             chart.xAxis[0].setCategories([checkedInterval + " Change"]);
             let chosenData = commodities[checkedInterval];
             let series = [];
+        
+            //remove all series
             if(chart.series.length >= 1){
                 let length = chart.series.length;
                 for(var i = length -1; i > -1; i--) {
                     chart.series[i].remove();
                 }
             }
+
+            //populate series
             for(let i = 0; i < chosenData.length; i++){
                 let curSeries = {};
                 curSeries["name"] = commodities["Names"][i];
                 curSeries["data"] = chosenData[i];
                 chart.addSeries(curSeries,false)
-            }            
+            }     
+            //redraw the chart with new data       
             chart.redraw()
         }
 
