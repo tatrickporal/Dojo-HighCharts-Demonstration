@@ -94,6 +94,8 @@
                     let selection = query("#interval-select");
                     on(selection, "change", function(e){
                             updateGraph(commodities, e.target.value);
+                    }, function(err){
+                        console.error(err);
                     });
                 });
             }
